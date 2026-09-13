@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+
+<title>ESP32-C3 Robot Controller</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+body {
+    margin: 0;
+    background: #202124;
+    color: white;
+    font-family: sans-serif;
+    overflow: hidden;
+}
+
+#top {
+    height: 80px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 10px 20px;
+}
+
+#status {
+    font-size: 18px;
+}
+
+#connectButton {
+    font-size: 18px;
+    padding: 12px 20px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: #4285f4;
+    color: white;
+}
+
+#controller {
+    position: relative;
+
+    width: 100vw;
+    height: calc(100vh - 80px);
+}
+
+.joystick {
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    border-radius: 50%;
+
+    background: #444;
+
+    border: 4px solid #666;
+}
+
+#leftJoystick {
+    left: 30px;
+    bottom: 30px;
+}
+
+#rightJoystick {
+    right: 30px;
+    bottom: 30px;
+}
+
+.stick {
+    position: absolute;
+
+    width: 70px;
+    height: 70px;
+
+    left: 55px;
+    top: 55px;
+
+    border-radius: 50%;
+
+    background: #aaa;
+}
+
+#kickButton {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+
+    width: 120px;
+    height: 120px;
+
+    border-radius: 50%;
+
+    border: none;
+
+    background: #d93025;
+    color: white;
+
+    font-size: 25px;
+    font-weight: bold;
+}
+
+#values {
+    position: absolute;
+
+    left: 50%;
+    top: 20px;
+
+    transform: translateX(-50%);
+
+    text-align: center;
+
+    font-family: monospace;
+    font-size: 16px;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div id="top">
+
+    <div id="status">
+        未接続
+    </div>
+
+    <button id="connectButton">
+        接続
+    </button>
+
+</div>
+
+
+<div id="controller">
+
+    <div id="values">
+        X: 0<br>
+        Y: 0<br>
+        R: 0
+    </div>
+
+
+    <div
+        id="leftJoystick"
+        class="joystick">
+
+        <div class="stick"></div>
+
+    </div>
+
+
+    <div
+        id="rightJoystick"
+        class="joystick">
+
+        <div class="stick"></div>
+
+    </div>
+
+
+    <button id="kickButton">
+        KICK
+    </button>
+
+</div>
+
+
+<script>
+
+const SERVICE_UUID =
+    "12345678-1234-1234-1234-1234567890ab";
+
+const CHARACTERISTIC_UUID =
+    "12345678-1234-1234-1234-1234567890ac";
+
+
+let device = null;
+let characteristic = null;
+
+let x = 0;
+let y = 0;
+let r = 0;
+
+let kick = 0;
+
+
+// =====================================
+// BLE接続
+// =====================================
+
+document
+    .getElementById("connectButton")
+    .addEventListener("click", async () => {
+
+    try {
+
+        const device =
+            await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: [SERVICE_UUID]
+            });
+    
+        document
+            .getElementById("status")
+            .textContent =
+            "接続中...";
+
+
+        const server =
+            await device.gatt.connect();
+
+
+        const service =
+            await server.getPrimaryService(
+                SERVICE_UUID
+            );
+
+
+        characteristic =
+            await service.getCharacteristic(
+                CHARACTERISTIC_UUID
+            );
+
+
+        document
+            .getElementById("status")
+            .textContent =
+            "接続済み";
+
+
+        device.addEventListener(
+            "gattserverdisconnected",
+            disconnected
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        document
+            .getElementById("status")
+            .textContent =
+            "接続失敗";
+
+    }
+
+});
+
+
+// =====================================
+// 切断
+// =====================================
+
+function disconnected()
+{
+    characteristic = null;
+
+    document
+        .getElementById("status")
+        .textContent =
+        "切断";
+}
+
+
+// =====================================
+// BLE送信
+// =====================================
+
+async function sendData()
+{
+    if (!characteristic)
+        return;
+
+
+    const data =
+        `${x},${y},${r},${kick}`;
+
+
+    const encoder =
+        new TextEncoder();
+
+
+    try {
+
+        await characteristic.writeValue(
+            encoder.encode(data)
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+    }
+}
+
+
+// =====================================
+// ジョイスティック
+// =====================================
+
+function setupJoystick(
+    joystickId,
+    callback
+)
+{
+
+    const joystick =
+        document.getElementById(
+            joystickId
+        );
+
+
+    const stick =
+        joystick.querySelector(
+            ".stick"
+        );
+
+
+    let active = false;
+
+
+    function move(clientX, clientY)
+    {
+
+        const rect =
+            joystick.getBoundingClientRect();
+
+
+        const centerX =
+            rect.left + rect.width / 2;
+
+        const centerY =
+            rect.top + rect.height / 2;
+
+
+        let dx =
+            clientX - centerX;
+
+        let dy =
+            clientY - centerY;
+
+
+        const max =
+            rect.width / 2 - 40;
+
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        if (distance > max)
+        {
+
+            dx =
+                dx / distance * max;
+
+            dy =
+                dy / distance * max;
+
+        }
+
+
+        stick.style.transform =
+            `translate(${dx}px, ${dy}px)`;
+
+
+        let nx =
+            dx / max;
+
+        let ny =
+            dy / max;
+
+
+        // デッドゾーン
+        const deadzone = 0.1;
+
+
+        if (
+            Math.abs(nx) < deadzone
+        )
+            nx = 0;
+
+
+        if (
+            Math.abs(ny) < deadzone
+        )
+            ny = 0;
+
+
+        callback(nx, ny);
+
+    }
+
+
+    function reset()
+    {
+
+        active = false;
+
+        stick.style.transform =
+            "translate(0px, 0px)";
+
+        callback(0, 0);
+
+    }
+
+
+    joystick.addEventListener(
+        "pointerdown",
+        event => {
+
+            active = true;
+
+            joystick.setPointerCapture(
+                event.pointerId
+            );
+
+            move(
+                event.clientX,
+                event.clientY
+            );
+
+        }
+    );
+
+
+    joystick.addEventListener(
+        "pointermove",
+        event => {
+
+            if (!active)
+                return;
+
+            move(
+                event.clientX,
+                event.clientY
+            );
+
+        }
+    );
+
+
+    joystick.addEventListener(
+        "pointerup",
+        reset
+    );
+
+
+    joystick.addEventListener(
+        "pointercancel",
+        reset
+    );
+
+}
+
+
+// =====================================
+// 左スティック
+// =====================================
+//
+// X → 左右
+// Y → 前後
+//
+// =====================================
+
+setupJoystick(
+    "leftJoystick",
+
+    (nx, ny) => {
+
+        x = Math.round(nx * 1000);
+
+        y = Math.round(-ny * 1000);
+
+    }
+);
+
+
+// =====================================
+// 右スティック
+// =====================================
+//
+// X → 回転
+//
+// =====================================
+
+setupJoystick(
+    "rightJoystick",
+
+    (nx, ny) => {
+
+        r = Math.round(nx * 1000);
+
+    }
+);
+
+
+// =====================================
+// KICK
+// =====================================
+
+const kickButton =
+    document.getElementById(
+        "kickButton"
+    );
+
+
+kickButton.addEventListener(
+    "pointerdown",
+    () => {
+
+        kick = 1;
+
+    }
+);
+
+
+kickButton.addEventListener(
+    "pointerup",
+    () => {
+
+        kick = 0;
+
+    }
+);
+
+
+kickButton.addEventListener(
+    "pointercancel",
+    () => {
+
+        kick = 0;
+
+    }
+);
+
+
+// =====================================
+// 表示更新
+// =====================================
+
+setInterval(
+    () => {
+
+        document
+            .getElementById("values")
+            .innerHTML =
+            `X: ${x}<br>
+             Y: ${y}<br>
+             R: ${r}`;
+
+    },
+    50
+);
+
+
+// =====================================
+// 通信
+// =====================================
+
+setInterval(
+    sendData,
+    50
+);
+
+
+// =====================================
+// 安全対策
+// =====================================
+//
+// ページから指が離れた場合は停止
+//
+
+window.addEventListener(
+    "pointerup",
+    () => {
+
+        kick = 0;
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>
