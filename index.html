@@ -540,30 +540,27 @@ const kickButton =
 
 kickButton.addEventListener(
     "pointerdown",
-    () => {
-
+    async () => {
         kick = 1;
-
+        await sendData();
     }
 );
 
 
 kickButton.addEventListener(
     "pointerup",
-    () => {
-
+    async () => {
         kick = 0;
-
+        await sendData();
     }
 );
 
 
 kickButton.addEventListener(
     "pointercancel",
-    () => {
-
+    async () => {
         kick = 0;
-
+        await sendData();
     }
 );
 
