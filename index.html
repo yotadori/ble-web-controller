@@ -216,6 +216,8 @@ document
     .getElementById("connectButton")
     .addEventListener("click", async () => {
 
+    await requestLandscape();
+
     try {
 
         const device =
@@ -610,6 +612,30 @@ window.addEventListener(
 
     }
 );
+
+// =====================================
+// 横画面を要求
+// =====================================
+
+async function requestLandscape()
+{
+    if (!screen.orientation)
+        return;
+
+    try
+    {
+        await screen.orientation.lock("landscape");
+
+        console.log("Landscape mode requested");
+    }
+    catch (error)
+    {
+        console.log(
+            "Landscape lock failed:",
+            error
+        );
+    }
+}
 
 </script>
 
