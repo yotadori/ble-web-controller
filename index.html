@@ -616,6 +616,10 @@ window.addEventListener(
 
 async function requestLandscape()
 {
+    // Android以外では何もしない
+    if (!isAndroid())
+        return;
+
     try
     {
         // フルスクリーン
@@ -716,6 +720,11 @@ function updateKeyboardControl()
 
     if (keys.has("Space"))
         kick = 1;
+}
+
+function isAndroid()
+{
+    return /Android/i.test(navigator.userAgent);
 }
 
 </script>
