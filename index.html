@@ -642,6 +642,82 @@ async function requestLandscape()
     }
 }
 
+// =====================================
+// キーボード操作
+// =====================================
+
+const keys = new Set();
+
+document.addEventListener("keydown", (event) => {
+
+    // ブラウザのスクロールを防止
+    if (
+        event.code === "Space" ||
+        event.code === "ArrowUp" ||
+        event.code === "ArrowDown" ||
+        event.code === "ArrowLeft" ||
+        event.code === "ArrowRight"
+    ) {
+        event.preventDefault();
+    }
+
+    keys.add(event.code);
+
+    updateKeyboardControl();
+});
+
+
+document.addEventListener("keyup", (event) => {
+
+    keys.delete(event.code);
+
+    updateKeyboardControl();
+});
+
+
+function updateKeyboardControl()
+{
+    x = 0;
+    y = 0;
+    r = 0;
+    kick = 0;
+
+    // -------------------------------
+    // WASD
+    // -------------------------------
+
+    if (keys.has("KeyA"))
+        x -= 1000;
+
+    if (keys.has("KeyD"))
+        x += 1000;
+
+    if (keys.has("KeyW"))
+        y += 1000;
+
+    if (keys.has("KeyS"))
+        y -= 1000;
+
+
+    // -------------------------------
+    // 矢印キー
+    // -------------------------------
+
+    if (keys.has("ArrowLeft"))
+        r -= 1000;
+
+    if (keys.has("ArrowRight"))
+        r += 1000;
+
+
+    // -------------------------------
+    // Space
+    // -------------------------------
+
+    if (keys.has("Space"))
+        kick = 1;
+}
+
 </script>
 
 </body>
