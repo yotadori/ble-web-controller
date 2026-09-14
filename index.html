@@ -619,19 +619,27 @@ window.addEventListener(
 
 async function requestLandscape()
 {
-    if (!screen.orientation)
-        return;
-
     try
     {
-        await screen.orientation.lock("landscape");
+        // フルスクリーン
+        if (!document.fullscreenElement)
+        {
+            await document.documentElement.requestFullscreen();
+        }
 
-        console.log("Landscape mode requested");
+        // 横向き
+        if (screen.orientation &&
+            screen.orientation.lock)
+        {
+            await screen.orientation.lock("landscape");
+
+            console.log("Landscape locked");
+        }
     }
     catch (error)
     {
         console.log(
-            "Landscape lock failed:",
+            "Orientation lock failed:",
             error
         );
     }
