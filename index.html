@@ -537,6 +537,27 @@ const kickButton =
         "kickButton"
     );
 
+kickButton.addEventListener(
+    "touchstart",
+    () => {
+        kick = 1;
+    }
+)
+
+kickButton.addEventListener(
+    "touchend",
+    () => {
+        kick = 0;
+    }
+)
+
+kickButton.addEventListener(
+    "touchcancel",
+    () => {
+        kick = 0;
+    }
+)
+
 
 kickButton.addEventListener(
     "pointerdown",
