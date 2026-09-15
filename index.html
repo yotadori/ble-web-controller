@@ -405,20 +405,12 @@ function setupJoystick(
 
 
         // デッドゾーン
-        const deadzone = 0.1;
+        const deadzone = 0.2;
 
-
-        if (
-            Math.abs(nx) < deadzone
-        )
+        if (Math.abs(Math.sqrt(nx * nx + ny * ny)) < deadzone) {
             nx = 0;
-
-
-        if (
-            Math.abs(ny) < deadzone
-        )
             ny = 0;
-
+        }
 
         callback(nx, ny);
 
