@@ -321,9 +321,15 @@ async function pumpSend()
     {
         const data = `${x},${y},${r},${kick}`;
 
-        await characteristic.writeValue(
-            new TextEncoder().encode(data)
-        );
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(data);
+
+        if (characteristic.properties.writeWithoutResponse) {
+            await characteristic.writeValueWithoutResponse(bytes);
+        }
+        else {
+            await characteristic.writeValue(bytes);
+        }
     }
     catch (error)
     {
@@ -547,32 +553,26 @@ const kickButton =
         "kickButton"
     );
 
+kickButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
 
-kickButton.addEventListener(
-    "pointerdown",
-    async () => {
-        kick = 1;
-        await sendData();
-    }
-);
+    kick = 1;
+    requestSend();
+});
 
+kickButton.addEventListener("pointerup", (event) => {
+    event.preventDefault();
 
-kickButton.addEventListener(
-    "pointerup",
-    async () => {
-        kick = 0;
-        await sendData();
-    }
-);
+    kick = 0;
+    requestSend();
+});
 
+kickButton.addEventListener("pointercancel", (event) => {
+    event.preventDefault();
 
-kickButton.addEventListener(
-    "pointercancel",
-    async () => {
-        kick = 0;
-        await sendData();
-    }
-);
+    kick = 0;
+    requestSend();
+});
 
 
 // =====================================
@@ -600,14 +600,13 @@ setInterval(
 // ページから指が離れた場合は停止
 //
 
-window.addEventListener(
-    "pointerup",
-    () => {
-
+window.addEventListener("pointerup", () => {
+    if (kick !== 0)
+    {
         kick = 0;
-
+        requestSend();
     }
-);
+});
 
 // =====================================
 // 横画面を要求
