@@ -294,35 +294,53 @@ function disconnected()
 // BLE送信
 // =====================================
 
-async function sendData()
+let sending = false;
+let sendRequested = false;
+
+function requestSend()
 {
+    sendRequested = true;
+    pumpSend();
+}
+
+async function pumpSend()
+{
+    if (sending)
+        return;
+
     if (!characteristic)
         return;
 
+    if (!sendRequested)
+        return;
 
-    const data =
-        `${x},${y},${r},${kick}`;
+    sending = true;
+    sendRequested = false;
 
-
-    const encoder =
-        new TextEncoder();
-
-
-    try {
+    try
+    {
+        const data = `${x},${y},${r},${kick}`;
 
         await characteristic.writeValue(
-            encoder.encode(data)
+            new TextEncoder().encode(data)
         );
-
+    }
+    catch (error)
+    {
+        console.error(error);
     }
 
-    catch (error) {
+    sending = false;
 
-        console.error(error);
-
+    // 送信中に新しい操作が発生していたら、
+    // 最新の状態をもう一度送る
+    if (sendRequested)
+    {
+        pumpSend();
     }
 }
 
+setInterval(requestSend, 20);
 
 // =====================================
 // ジョイスティック
@@ -574,17 +592,6 @@ setInterval(
     },
     50
 );
-
-
-// =====================================
-// 通信
-// =====================================
-
-setInterval(
-    sendData,
-    50
-);
-
 
 // =====================================
 // 安全対策
